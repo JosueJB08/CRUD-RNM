@@ -1,10 +1,11 @@
 import './App.css';
-import {useState} from "react"
+import {useState,useEffect} from "react"
 import Axios from "axios"
 import 'bootstrap/dist/css/bootstrap.min.css';
-
+import Swal from 'sweetalert2'
 
 function App() {
+  
 
   const [nombre,setNombre] = useState("");
   const [edad,setEdad] = useState(0);
@@ -13,12 +14,38 @@ function App() {
   const [anios,setAnios] = useState(0);
   const [editar,setEditar] = useState(false);
   const [id,setId] = useState(false);
-
-
-
-
   const [empleadosList, setEmpleados] = useState([]);
 
+  const borrar = (val)=>{
+    Swal.fire({
+      title: "ELIMINAR",
+      html: "¿Estás seguro de eliminar al empleado <strong>" + val.nombre +"</strong> ?",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#3085d6",
+      cancelButtonColor: "#d33",
+      confirmButtonText: "Sí, eliminar",
+      cancelButtonText: "Cancelar",
+    }).then((result) => {
+      if (result.isConfirmed) {
+        Axios.delete(`http://localhost:3001/delete/${val.id}`,).then(()=>{
+          getEmpleados();
+          setCampos();
+          Swal.fire({
+            title: "Eliminado",
+            text: val.nombre + " fue eliminado",
+            icon: "success"
+          });
+        }).catch(function(error){
+          Swal.fire({
+            icon: "error",
+            title: "Oops... No se a podido eliminar el empleado",
+            text: JSON.parse(JSON.stringify(error)).message === "Network Error" ? "Problemas con el servidor, intenta más tarde" :JSON.parse(JSON.stringify(error)).message
+          });
+        });
+      }
+    });
+  }
 
 
   const add = ()=> {
@@ -30,8 +57,53 @@ function App() {
     anios:anios
     }).then(()=>{
       getEmpleados();
-      alert("Empleado registrado");
+      setCampos();
+      Swal.fire({
+        title: "Registro correcto",
+        html: "El empleado <strong>" + nombre +"</strong> ha sido registrado",
+        icon: "success"
+      });
+    }).catch(function(error){
+      Swal.fire({
+        icon: "error",
+        title: "Oops... No se a podido agregar el empleado",
+        text: JSON.parse(JSON.stringify(error)).message === "Network Error" ? "Problemas con el servidor, intenta más tarde" :JSON.parse(JSON.stringify(error)).message
+      });
     });
+  }
+
+  const update = ()=> {
+    Axios.put("http://localhost:3001/update", {
+    id:id,
+    nombre:nombre,
+    edad:edad, 
+    pais:pais,
+    cargo:cargo,
+    anios:anios
+    }).then(()=>{
+      getEmpleados();
+      setCampos();
+      Swal.fire({
+        title: "Actualización exitosa",
+        html: "Los datos del empleado <strong>" + nombre +"</strong> han sido actualizados",
+        icon: "success"
+      });
+    }).catch(function(error){
+      Swal.fire({
+        icon: "error",
+        title: "Oops... No se a podido actualizar el empleado",
+        text: JSON.parse(JSON.stringify(error)).message === "Network Error" ? "Problemas con el servidor, intenta más tarde" :JSON.parse(JSON.stringify(error)).message
+      });
+    });
+  }
+
+  const setCampos = ()=>{
+    setNombre("");
+    setEdad("");
+    setPais("");
+    setCargo("");
+    setAnios("");
+    setEditar(false);
   }
 
   const editarEmpleado = (val)=>{
@@ -42,7 +114,6 @@ function App() {
       setCargo(val.cargo);
       setAnios(val.anios);
       setId(val.id);
-
   }
 
   const getEmpleados = ()=> {
@@ -50,7 +121,10 @@ function App() {
       setEmpleados(response.data);
     });
   }
-  // getEmpleados();
+
+  useEffect(() => {
+    getEmpleados();
+  }, []);
 
   return (
     <div className="container">
@@ -105,7 +179,14 @@ function App() {
           </div>
         </div>
         <div className='card-footer text-muted'>
-          <button className='btn btn-success' onClick={add}>Guardar</button>
+          {
+            editar ? 
+              <div>
+                <button className='btn btn-warning m-2' onClick={update}>Actualizar</button>
+                <button className='btn btn-danger m-2' onClick={setCampos}>Cancelar</button>
+              </div>
+            : <button className='btn btn-success' onClick={add}>Guardar</button>
+          }
         </div>
       </div>
 
@@ -138,7 +219,14 @@ function App() {
                       onClick={()=>{
                         editarEmpleado(val)
                       }} className="btn btn-info">Editar</button>
-                      <button type="button" className="btn btn-danger">Eliminar</button>
+
+                      <button type="button" 
+                      onClick={()=>{
+                        borrar(val);
+                      }}
+                      className="btn btn-danger">
+                      Eliminar</button>
+                      
                     </div>                  
                   </td>
 
